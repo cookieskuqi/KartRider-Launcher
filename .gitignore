@@ -1,12 +1,12 @@
 # 构建产物
 bin/
 obj/
-PublishedWinExe/
 publish_out/
 
-# 用户数据
-Profile/
-Logs/
+# 运行数据（只忽略仓库根目录下的，别误伤 KartRider.Data/Profile 源码）
+/Profile/
+/Logs/
+/PublishedWinExe/
 
 # IDE
 .vs/
