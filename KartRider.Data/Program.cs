@@ -217,21 +217,15 @@ namespace KartRider
                 }
                 consoleHandle = GetConsoleWindow();
 
-                try
-                {
-                    Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), Encoding.UTF8) { AutoFlush = true });
-                }
-                catch
-                {
-                    // 某些终端下拿不到标准输出，忽略即可，缓存仍然可用
-                }
+                // 先确定控制台代码页（中文系统通常是 936/GBK），Console.Out 会按新编码重建；
+                // 之后再包一层缓存写入器。顺序反了就会用 UTF-8 的字节去填 GBK 的控制台 → 中文乱码。
+                SetAdaptiveConsoleEncoding();
 
                 var writer = new CachedConsoleWriter(Console.Out);
                 CachedConsoleWriter.cachedWriter = writer;
                 Console.SetOut(writer);
                 Console.SetError(writer);
 
-                SetAdaptiveConsoleEncoding();
                 return consoleHandle;
             }
             catch (Exception ex)
