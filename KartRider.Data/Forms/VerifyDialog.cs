@@ -1,7 +1,9 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using KartRider.Common.Data;
@@ -121,7 +123,23 @@ namespace KartRider
                 string updateUrl = probe.Item1;
                 if (string.IsNullOrWhiteSpace(updateUrl))
                 {
-                    Finish(false, "无法从当前服务器获取补丁地址。\r\n请确认启动器已连上服务器（设置里的 IP / 端口）后再试。");
+                    // 本机单机模式（127.0.0.1）没有服务端给补丁地址，这里退化成"关键文件自检"
+                    var missing = CheckLocalFiles(gamePath);
+                    if (missing.Count == 0)
+                    {
+                        Finish(false,
+                            "当前服务器没有返回补丁地址。\r\n" +
+                            "如果你连的是本机（127.0.0.1）单机模式，本身就没有在线补丁源，属于正常现象。\r\n" +
+                            "已完成本地关键文件检查：未发现缺失。要完整校验请切到远程服务器后重试。");
+                    }
+                    else
+                    {
+                        Finish(false,
+                            "当前服务器没有返回补丁地址，且本地关键文件有缺失：\r\n" +
+                            string.Join("\r\n", missing.Take(6)) +
+                            (missing.Count > 6 ? $"\r\n…共 {missing.Count} 项" : "") +
+                            "\r\n建议重新安装游戏或把文件补齐。");
+                    }
                     return;
                 }
 
@@ -141,6 +159,45 @@ namespace KartRider
                 Log.Info($"[Verify] 校验失败: {ex}");
                 Finish(false, "校验未完成：" + ex.Message);
             }
+        }
+
+        /// <summary>没有补丁源时退而求其次：检查启动游戏必需的关键文件是否存在且非空。</summary>
+        private static List<string> CheckLocalFiles(string root)
+        {
+            var missing = new List<string>();
+            if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+            {
+                missing.Add("游戏目录不存在：" + root);
+                return missing;
+            }
+
+            string[] required =
+            {
+                "KartRider.exe",
+                "KartRider.pin",
+                "Data\\aaa.pk"
+            };
+
+            foreach (string rel in required)
+            {
+                string full = Path.Combine(root, rel);
+                if (!File.Exists(full))
+                {
+                    missing.Add(rel + "（缺失）");
+                }
+                else if (new FileInfo(full).Length == 0)
+                {
+                    missing.Add(rel + "（大小为 0）");
+                }
+            }
+
+            string patcher = Path.Combine(root, "Patcher.ex0");
+            if (!File.Exists(patcher) && !File.Exists(Path.Combine(root, "Patcher.exe")))
+            {
+                missing.Add("Patcher.ex0 / Patcher.exe（缺失）");
+            }
+
+            return missing;
         }
 
         /// <summary>校验进行中不允许关窗口，避免后台任务仍在跑、界面却被释放。</summary>
