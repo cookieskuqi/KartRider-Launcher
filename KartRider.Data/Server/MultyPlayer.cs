@@ -379,6 +379,7 @@ public static class MultyPlayer
         InitRoom(room);
 
         GameResultPacket(room, menbers, timeData);
+        MatchRecorder.Record(room, menbers, timeData);
 
         int firstID = room.Ranking.FirstOrDefault(x => x.Value == 0).Key;
         if (room.RoomMaster < 8 && RoomManager.TryGetIdDetail(room.RoomId, firstID) is Player p1)

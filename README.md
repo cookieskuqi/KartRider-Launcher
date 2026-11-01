@@ -42,6 +42,22 @@
 
 配置保存在游戏目录的 `Profile\Settings.json`。
 
+### 战绩查询
+
+结算时启动器会把对局记录写入游戏目录的 `Matches\matches.json`（保留最近 500 场），
+并通过本地管理接口提供查询：
+
+```
+GET /api/matches?n=20&nickname=酷奇   最近对局（可按昵称过滤）
+GET /api/user?nickname=酷奇           生涯统计（场次/冠军/前三/未完成）
+GET /api/userlist                     出现过的玩家昵称
+GET /stats                            战绩查询网页
+```
+
+管理接口默认只监听 127.0.0.1（端口 `AdminPort`，可在 `Settings.json` 改），
+浏览器打开 `http://127.0.0.1:39314/stats` 即可查询。局域网玩家想访问，
+需要把监听地址改为全网卡（暂未开放此选项）。
+
 ### 公告栏格式
 
 `Profile\notice.txt`（首次运行会自动生成示例）：

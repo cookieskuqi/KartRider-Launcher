@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -169,6 +169,32 @@ namespace KartRider
                             break;
                         case "/rooms":
                             await WriteAsync(stream, 200, "application/json", JsonSerializer.Serialize(BuildRooms())).ConfigureAwait(false);
+                            break;
+                        case "/api/matches":
+                        {
+                            // 最近 n 场对局：/api/matches?n=20&nickname=酷奇
+                            int n = Math.Clamp(ParseInt(GetQuery(query, "n"), 20), 1, 500);
+                            string nick = GetQuery(query, "nickname");
+                            await WriteAsync(stream, 200, "application/json", MatchRecorder.QueryMatches(n, nick)).ConfigureAwait(false);
+                            break;
+                        }
+                        case "/api/userlist":
+                            await WriteAsync(stream, 200, "application/json", MatchRecorder.UserList()).ConfigureAwait(false);
+                            break;
+                        case "/api/user":
+                        {
+                            // 玩家生涯统计：/api/user?nickname=酷奇
+                            string nick = GetQuery(query, "nickname");
+                            if (string.IsNullOrWhiteSpace(nick))
+                            {
+                                await WriteAsync(stream, 400, "text/plain", "nickname is required").ConfigureAwait(false);
+                                break;
+                            }
+                            await WriteAsync(stream, 200, "application/json", MatchRecorder.UserStats(nick)).ConfigureAwait(false);
+                            break;
+                        }
+                        case "/stats":
+                            await WriteAsync(stream, 200, "text/html", StatsPage.Html).ConfigureAwait(false);
                             break;
                         case "/packets":
                         {
