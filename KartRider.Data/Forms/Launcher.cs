@@ -71,6 +71,17 @@ namespace KartRider
             RefreshNotice();
             button_ToggleTerminal.Text = Program.isVisible ? "隐藏控制台" : "显示控制台";
 
+            // 选项：启动器显示后自动最小化
+            if (ProfileService.SettingConfig.AutoMinimize)
+            {
+                WindowState = FormWindowState.Minimized;
+            }
+
+            // 定时同步「启动游戏 / 结束游戏」按钮状态（游戏可能自己退出）
+            gameWatchTimer.Tick += (s, e) => SyncGameButton();
+            gameWatchTimer.Start();
+            SyncGameButton();
+
             string[] UserPaths = Directory.GetDirectories(FileName.ProfileDir);
             foreach (string userPath in UserPaths)
             {
@@ -425,14 +436,52 @@ namespace KartRider
             }
         }
 
+        /// <summary>每 2 秒同步一次「启动游戏 / 结束游戏」按钮状态。</summary>
+        private readonly System.Windows.Forms.Timer gameWatchTimer = new System.Windows.Forms.Timer { Interval = 2000 };
+
+        private static bool IsGameRunning()
+        {
+            return System.Diagnostics.Process.GetProcessesByName("KartRider").Length > 0;
+        }
+
+        private void SyncGameButton()
+        {
+            string text = IsGameRunning() ? "结束游戏" : "启动游戏";
+            if (Start_Button.Text != text)
+            {
+                Start_Button.Text = text;
+                Start_Button.Invalidate();
+            }
+        }
+
         private void Start_Button_Click(object sender, EventArgs e)
         {
-            // if (Process.GetProcessesByName("KartRider").Length != 0)
-            // {
-            //     LauncherSystem.MessageBoxType1();
-            // }
-            // else
-            // {
+            // 游戏已经在跑：按钮此时是「结束游戏」，点击结束它
+            if (IsGameRunning())
+            {
+                var confirm = MessageBox.Show(this, "要结束正在运行的游戏吗？", "结束游戏",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (confirm != DialogResult.Yes)
+                {
+                    return;
+                }
+
+                foreach (var process in System.Diagnostics.Process.GetProcessesByName("KartRider"))
+                {
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(3000);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Info($"结束游戏失败: {ex.Message}");
+                    }
+                }
+                SyncGameButton();
+                return;
+            }
+
             var thread = new Thread(() =>
             {
                 try
@@ -449,7 +498,6 @@ namespace KartRider
                 Name = "GameLauncherThread"
             };
             thread.Start();
-            // }
         }
 
         /// <summary>
@@ -549,6 +597,17 @@ namespace KartRider
                 Program.ShowWindow(handle, Program.isVisible ? Program.SW_SHOW : Program.SW_HIDE);
             }
             button_ToggleTerminal.Text = Program.isVisible ? "隐藏控制台" : "显示控制台";
+
+            // 选项：启动器显示后自动最小化
+            if (ProfileService.SettingConfig.AutoMinimize)
+            {
+                WindowState = FormWindowState.Minimized;
+            }
+
+            // 定时同步「启动游戏 / 结束游戏」按钮状态（游戏可能自己退出）
+            gameWatchTimer.Tick += (s, e) => SyncGameButton();
+            gameWatchTimer.Start();
+            SyncGameButton();
             ProfileService.SettingConfig.Console = Program.isVisible;
             ProfileService.SaveSettings();
         }

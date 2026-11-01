@@ -88,6 +88,9 @@ namespace Profile
 
         public bool EnableMod { get; set; } = false;
 
+        /// <summary>启动器窗口显示后自动最小化（挂后台等游戏）。</summary>
+        public bool AutoMinimize { get; set; } = false;
+
         public bool SoloRank { get; set; } = true;
 
         public string Proxy { get; set; } = "https://gh-proxy.com/";

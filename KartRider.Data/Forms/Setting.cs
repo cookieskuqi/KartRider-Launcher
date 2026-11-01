@@ -105,6 +105,7 @@ namespace KartRider
             ProfileService.SettingConfig.SoloRank = SoloRank.Checked;
             ProfileService.SettingConfig.EnableMod = EnableMod.Checked;
             ProfileService.SettingConfig.AutoUpdate = AutoUpdate.Checked;
+            ProfileService.SettingConfig.AutoMinimize = AutoMinimizeCheck.Checked;
 
             // IP / 端口放在最后：校验通过才写入，真的变了才重启监听
             ApplyEndpoint(restartIfChanged: true, showInvalidMessage: false);
@@ -686,6 +687,7 @@ namespace KartRider
             SoloRank.Checked = ProfileService.SettingConfig.SoloRank;
             EnableMod.Checked = ProfileService.SettingConfig.EnableMod;
             AutoUpdate.Checked = ProfileService.SettingConfig.AutoUpdate;
+            AutoMinimizeCheck.Checked = ProfileService.SettingConfig.AutoMinimize;
             foreach (string key in SpeedType.speedNames[ProfileService.SettingConfig.Version].Keys)
             {
                 Speed_comboBox.Items.Add(key);

@@ -49,6 +49,7 @@ namespace KartRider
             BgOpacity_Value = new Label();
             BgCard_Value = new Label();
             DarkModeCheck = new FlatCheckBox();
+            AutoMinimizeCheck = new FlatCheckBox();
             FrostedCheck = new FlatCheckBox();
 
             SuspendLayout();
@@ -57,7 +58,7 @@ namespace KartRider
 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-            ClientSize = new Size(520, 818);
+            ClientSize = new Size(520, 842);
             Font = Theme.F(9f);
             BackColor = Theme.Bg;
             MaximizeBox = false;
@@ -177,7 +178,7 @@ namespace KartRider
             CardGame.Name = "CardGame";
             CardGame.Canvas = Theme.Bg;
             CardGame.Location = new Point(24, 296);
-            CardGame.Size = new Size(472, 200);
+            CardGame.Size = new Size(472, 224);
 
             CardGame.Controls.Add(SectionTitle("游戏", new Point(22, 16)));
 
@@ -281,7 +282,7 @@ namespace KartRider
             CardAppearance = new CardPanel();
             CardAppearance.Name = "CardAppearance";
             CardAppearance.Canvas = Theme.Bg;
-            CardAppearance.Location = new Point(24, 508);
+            CardAppearance.Location = new Point(24, 532);
             CardAppearance.Size = new Size(472, 240);
             CardAppearance.Controls.Add(SectionTitle("外观", new Point(22, 16)));
 
@@ -413,6 +414,14 @@ namespace KartRider
             BgCard_Value.Location = new Point(296, 170);
             CardAppearance.Controls.Add(BgCard_Value);
 
+            AutoMinimizeCheck.Name = "AutoMinimizeCheck";
+            AutoMinimizeCheck.Text = "启动时自动最小化";
+            AutoMinimizeCheck.Font = Theme.F(9.5f);
+            AutoMinimizeCheck.Location = new Point(96, 192);
+            AutoMinimizeCheck.Size = new Size(150, 22);
+            AutoMinimizeCheck.TabIndex = 21;
+            CardGame.Controls.Add(AutoMinimizeCheck);
+
             DarkModeCheck.Name = "DarkModeCheck";
             DarkModeCheck.Text = "深色模式";
             DarkModeCheck.Font = Theme.F(9.5f);
@@ -438,7 +447,7 @@ namespace KartRider
             SaveHint.Font = Theme.F(8.5f);
             SaveHint.ForeColor = Theme.TextSecondary;
             SaveHint.BackColor = Theme.Bg;
-            SaveHint.Location = new Point(28, 772);
+            SaveHint.Location = new Point(28, 796);
 
             Done_Button.Name = "Done_Button";
             Done_Button.Text = "完成";
@@ -446,7 +455,7 @@ namespace KartRider
             Done_Button.Surface = Theme.Bg;
             Done_Button.Radius = 8;
             Done_Button.Font = Theme.F(10f, FontStyle.Bold);
-            Done_Button.Location = new Point(404, 760);
+            Done_Button.Location = new Point(404, 784);
             Done_Button.Size = new Size(92, 38);
             Done_Button.TabIndex = 14;
             Done_Button.Click += (s, e) => Close();
@@ -489,6 +498,7 @@ namespace KartRider
         private Label BgOpacity_Value;
         private Label BgCard_Value;
         private FlatCheckBox DarkModeCheck;
+        private FlatCheckBox AutoMinimizeCheck;
         private FlatCheckBox FrostedCheck;
 
         private Label Name_label;
