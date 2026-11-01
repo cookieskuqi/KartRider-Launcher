@@ -192,6 +192,62 @@ namespace KartRider.Ui
             }
         }
 
+        /// <summary>
+        /// 取背景图在某个窗口区域内的平均色。
+        /// 用来自绘控件（例如 RichTextBox）在半透明卡片上取一个接近的实色底。
+        /// </summary>
+        public static Color AverageColor(Image image, Rectangle windowBounds, Rectangle area)
+        {
+            if (image == null || area.Width <= 0 || area.Height <= 0)
+            {
+                return Color.Transparent;
+            }
+
+            try
+            {
+                Rectangle cover = CoverRect(windowBounds, image.Width, image.Height);
+                float sx = (float)image.Width / cover.Width;
+                float sy = (float)image.Height / cover.Height;
+
+                var src = new Rectangle(
+                    (int)((area.X - cover.X) * sx),
+                    (int)((area.Y - cover.Y) * sy),
+                    Math.Max(1, (int)(area.Width * sx)),
+                    Math.Max(1, (int)(area.Height * sy)));
+
+                src.Intersect(new Rectangle(0, 0, image.Width, image.Height));
+                if (src.Width <= 0 || src.Height <= 0)
+                {
+                    return Color.Transparent;
+                }
+
+                using (var one = new Bitmap(1, 1))
+                {
+                    using (Graphics g = Graphics.FromImage(one))
+                    {
+                        g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                        g.DrawImage(image, new Rectangle(0, 0, 1, 1), src, GraphicsUnit.Pixel);
+                    }
+                    return one.GetPixel(0, 0);
+                }
+            }
+            catch
+            {
+                return Color.Transparent;
+            }
+        }
+
+        /// <summary>把 top 以 alpha 叠在 bottom 上，返回合成色。</summary>
+        public static Color Blend(Color bottom, Color top, int alpha)
+        {
+            int a = Math.Max(0, Math.Min(255, alpha));
+            return Color.FromArgb(
+                (top.R * a + bottom.R * (255 - a)) / 255,
+                (top.G * a + bottom.G * (255 - a)) / 255,
+                (top.B * a + bottom.B * (255 - a)) / 255);
+        }
+
         /// <summary>圆角矩形路径。半径过大时自动收缩，避免短控件画歪。</summary>
         public static GraphicsPath Round(Rectangle rect, int radius)
         {

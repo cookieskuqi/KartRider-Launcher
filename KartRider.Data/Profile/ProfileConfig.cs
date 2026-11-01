@@ -110,7 +110,10 @@ namespace Profile
         public int LauncherCardOpacity { get; set; } = 84;
 
         /// <summary>公告来源：http(s) 网址或本地 txt 路径；留空则用 Profile\notice.txt（存在时）。</summary>
-        public string NoticeSource { get; set; } = "";
+        public string NoticeSource { get; set; } = DefaultNoticeSource;
+
+        /// <summary>默认公告地址（GitHub Pages）。</summary>
+        public const string DefaultNoticeSource = "https://cookieskuqi.github.io/Kartrider-Launcher__Noticepublish/notice.txt";
 
         /// <summary>深色模式。</summary>
         public bool DarkMode { get; set; } = false;

@@ -1,43 +1,49 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.Text;
 using System.Windows.Forms;
 
 namespace KartRider.Ui
 {
     /// <summary>
-    /// 公告列表的显示控件：自绘、可滚轮滚动、右上角一条细滚动条。
-    /// 背景透明，由外层卡片负责上色，所以能跟着背景图/毛玻璃一起变。
+    /// 公告显示控件。用 RichTextBox 实现，文字可以选中、复制（Ctrl+C / 右键复制），
+    /// 正文里的网址会被自动识别成链接，点一下就打开浏览器。
+    /// 底色由外部按背景图算好传进来，尽量和半透明卡片融为一体。
     /// </summary>
-    public class NoticeView : Control
+    public class NoticeView : RichTextBox
     {
-        private const int PadX = 6;
-        private const int PadY = 4;
-        private const int Gap = 12;
-        private const int ScrollBarWidth = 4;
-
         private readonly List<NoticeItem> items = new List<NoticeItem>();
-        private int scroll;
         private string emptyText = "还没有公告";
 
         public NoticeView()
         {
-            SetStyle(ControlStyles.UserPaint
-                | ControlStyles.AllPaintingInWmPaint
-                | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw
-                | ControlStyles.SupportsTransparentBackColor, true);
-            BackColor = Color.Transparent;
+            BorderStyle = BorderStyle.None;
+            ReadOnly = true;
+            WordWrap = true;
+            DetectUrls = true;
+            ScrollBars = RichTextBoxScrollBars.Vertical;
+            HideSelection = false;
+            ShortcutsEnabled = true;
+            TabStop = false;
             Font = Theme.F(9f);
+            ForeColor = Theme.TextPrimary;
+            BackColor = Theme.Surface;
         }
 
         /// <summary>没有公告时显示的提示文字。</summary>
         public string EmptyText
         {
             get { return emptyText; }
-            set { emptyText = value ?? string.Empty; Invalidate(); }
+            set
+            {
+                emptyText = value ?? string.Empty;
+                Render();
+            }
         }
 
+        /// <summary>设置公告内容。</summary>
         public void SetItems(List<NoticeItem> list)
         {
             items.Clear();
@@ -45,139 +51,147 @@ namespace KartRider.Ui
             {
                 items.AddRange(list);
             }
-            scroll = 0;
-            Invalidate();
+            Render();
         }
 
-        protected override void OnPaint(PaintEventArgs e)
+        /// <summary>换肤后重新渲染一次，让颜色跟着变。</summary>
+        public void RefreshTheme()
         {
-            Graphics g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            ForeColor = Theme.TextPrimary;
+            Render();
+        }
 
-            int width = Width - PadX * 2;
+        /// <summary>设置控件底色（通常是"背景图平均值 + 卡片色"的合成色）。</summary>
+        public void SetBackdrop(Color color)
+        {
+            if (color.A == 0)
+            {
+                color = Theme.Surface;
+            }
+            if (BackColor != color)
+            {
+                BackColor = color;
+            }
+        }
+
+        protected override void OnLinkClicked(LinkClickedEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(e.LinkText) { UseShellExecute = true });
+            }
+            catch
+            {
+                // 打不开就算了，不影响阅读
+            }
+            base.OnLinkClicked(e);
+        }
+
+        private void Render()
+        {
+            try
+            {
+                string rtf = BuildRtf();
+                if (Rtf != rtf)
+                {
+                    Rtf = rtf;
+                }
+                SelectionStart = 0;
+                SelectionLength = 0;
+                ScrollToCaret();
+            }
+            catch (Exception)
+            {
+                // RTF 拼错时退回纯文本，至少内容还在
+                Text = emptyText;
+            }
+        }
+
+        private string BuildRtf()
+        {
+            var sb = new StringBuilder();
+            sb.Append(@"{\rtf1\ansi\deff0{\fonttbl{\f0\fnil\fcharset134 Microsoft YaHei UI;}}");
+            sb.Append(@"{\colortbl ;");
+            AppendColor(sb, Theme.TextPrimary);   // 1
+            AppendColor(sb, Theme.TextSecondary); // 2
+            AppendColor(sb, Theme.Accent);        // 3
+            sb.Append('}');
+
             if (items.Count == 0)
             {
-                TextRenderer.DrawText(g, emptyText, Font, new Rectangle(PadX, PadY, width, Height - PadY * 2),
-                    Theme.TextSecondary, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak);
-                return;
+                sb.Append(@"\pard\sl260\cf2\fs18 ").Append(Escape(emptyText)).Append(@"\par");
+                sb.Append('}');
+                return sb.ToString();
             }
-
-            Font titleFont = Theme.F(9.5f, FontStyle.Bold);
-            Font metaFont = Theme.F(8f);
-
-            int y = PadY - scroll;
-            int total = 0;
 
             foreach (NoticeItem item in items)
             {
-                // 标题（顺带把日期画在同一行前面）
-                int titleHeight = TextRenderer.MeasureText(g, item.Title, titleFont,
-                    new Size(width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+                sb.Append(@"\pard\sl260 ");
+                if (!string.IsNullOrEmpty(item.Date))
+                {
+                    sb.Append(@"{\cf3\fs16 ").Append(Escape(item.Date)).Append("}  ");
+                }
+                sb.Append(@"{\b\cf1\fs19 ").Append(Escape(item.Title)).Append(@"}\par");
 
-                int bodyHeight = 0;
                 if (!string.IsNullOrWhiteSpace(item.Body))
                 {
-                    bodyHeight = TextRenderer.MeasureText(g, item.Body, Font,
-                        new Size(width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
+                    sb.Append(@"\pard\sl260{\cf2\fs18 ").Append(Escape(item.Body)).Append(@"}\par");
                 }
+                sb.Append(@"\pard\par");
+            }
 
-                int blockHeight = titleHeight + bodyHeight + (bodyHeight > 0 ? 4 : 0);
-                if (y + blockHeight >= 0 && y <= Height)
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        private static void AppendColor(StringBuilder sb, Color color)
+        {
+            sb.Append(@"\red").Append(color.R)
+              .Append(@"\green").Append(color.G)
+              .Append(@"\blue").Append(color.B)
+              .Append(';');
+        }
+
+        /// <summary>RTF 转义：反斜杠、花括号要转义，非 ASCII 写成 \uNNNN?，换行写成 \line。</summary>
+        private static string Escape(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder(text.Length + 16);
+            foreach (char c in text)
+            {
+                switch (c)
                 {
-                    if (!string.IsNullOrEmpty(item.Date))
-                    {
-                        Font dateFont = metaFont;
-                        int dateWidth = TextRenderer.MeasureText(g, item.Date, dateFont).Width + 6;
-                        TextRenderer.DrawText(g, item.Date, dateFont,
-                            new Rectangle(PadX, y + 2, dateWidth, titleHeight),
-                            Theme.Accent, TextFormatFlags.Left | TextFormatFlags.Top);
-                        TextRenderer.DrawText(g, item.Title, titleFont,
-                            new Rectangle(PadX + dateWidth, y, width - dateWidth, titleHeight),
-                            Theme.TextPrimary, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                    }
-                    else
-                    {
-                        TextRenderer.DrawText(g, item.Title, titleFont,
-                            new Rectangle(PadX, y, width, titleHeight),
-                            Theme.TextPrimary, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                    }
-
-                    if (bodyHeight > 0)
-                    {
-                        TextRenderer.DrawText(g, item.Body, Font,
-                            new Rectangle(PadX, y + titleHeight + 4, width, bodyHeight),
-                            Theme.TextSecondary, TextFormatFlags.Left | TextFormatFlags.Top | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
-                    }
+                    case '\\':
+                        sb.Append(@"\\");
+                        break;
+                    case '{':
+                        sb.Append(@"\{");
+                        break;
+                    case '}':
+                        sb.Append(@"\}");
+                        break;
+                    case '\r':
+                        break;
+                    case '\n':
+                        sb.Append(@"\line ");
+                        break;
+                    default:
+                        if (c < 128)
+                        {
+                            sb.Append(c);
+                        }
+                        else
+                        {
+                            sb.Append(@"\u").Append((int)c).Append('?');
+                        }
+                        break;
                 }
-
-                y += blockHeight + Gap;
-                total = y + scroll;
             }
-
-            DrawScrollBar(g, total);
-        }
-
-        private void DrawScrollBar(Graphics g, int contentHeight)
-        {
-            int viewHeight = Height - PadY * 2;
-            if (contentHeight <= viewHeight)
-            {
-                return;
-            }
-
-            int barHeight = Math.Max(24, viewHeight * viewHeight / contentHeight);
-            int maxScroll = contentHeight - viewHeight;
-            int barTop = PadY + (int)((long)(viewHeight - barHeight) * scroll / Math.Max(1, maxScroll));
-
-            var track = new Rectangle(Width - ScrollBarWidth - 2, PadY, ScrollBarWidth, viewHeight);
-            Theme.Fill(g, track, ScrollBarWidth / 2, Theme.Border);
-            Theme.Fill(g, new Rectangle(track.X, barTop, ScrollBarWidth, barHeight), ScrollBarWidth / 2, Theme.TextSecondary);
-        }
-
-        protected override void OnMouseWheel(MouseEventArgs e)
-        {
-            ScrollBy(-e.Delta / 120 * 48);
-            base.OnMouseWheel(e);
-        }
-
-        private void ScrollBy(int delta)
-        {
-            int contentHeight = MeasureContentHeight();
-            int viewHeight = Height - PadY * 2;
-            int max = Math.Max(0, contentHeight - viewHeight);
-            int next = Math.Max(0, Math.Min(max, scroll + delta));
-            if (next != scroll)
-            {
-                scroll = next;
-                Invalidate();
-            }
-        }
-
-        private int MeasureContentHeight()
-        {
-            if (items.Count == 0)
-            {
-                return 0;
-            }
-
-            using (Graphics g = CreateGraphics())
-            {
-                int width = Width - PadX * 2;
-                Font titleFont = Theme.F(9.5f, FontStyle.Bold);
-                int total = PadY * 2;
-                foreach (NoticeItem item in items)
-                {
-                    int h = TextRenderer.MeasureText(g, item.Title, titleFont,
-                        new Size(width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
-                    if (!string.IsNullOrWhiteSpace(item.Body))
-                    {
-                        h += 4 + TextRenderer.MeasureText(g, item.Body, Font,
-                            new Size(width, int.MaxValue), TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
-                    }
-                    total += h + Gap;
-                }
-                return total;
-            }
+            return sb.ToString();
         }
     }
 }

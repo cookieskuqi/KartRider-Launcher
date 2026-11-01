@@ -1,4 +1,4 @@
-using KartRider;
+﻿using KartRider;
 using KartRider.Logging;
 using RiderData;
 using System;
@@ -150,6 +150,17 @@ namespace Profile
                         SettingConfig.StartDelayMs = 4000;
                     }
                     SettingConfig.SettingsVersion = 3;
+                    SaveSettings();
+                }
+
+                // v4：公告来源改为默认的 GitHub Pages 地址（老配置这一项是空的）
+                if (SettingConfig.SettingsVersion < 4)
+                {
+                    if (string.IsNullOrWhiteSpace(SettingConfig.NoticeSource))
+                    {
+                        SettingConfig.NoticeSource = Setting.DefaultNoticeSource;
+                    }
+                    SettingConfig.SettingsVersion = 4;
                     SaveSettings();
                 }
 

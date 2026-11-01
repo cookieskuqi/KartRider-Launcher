@@ -31,10 +31,10 @@ namespace KartRider
             Proxy_label = new Label();
             Proxy_comboBox = new FlatComboBox();
 
-            NgsOn = new CheckBox();
-            SoloRank = new CheckBox();
-            EnableMod = new CheckBox();
-            AutoUpdate = new CheckBox();
+            NgsOn = new FlatCheckBox();
+            SoloRank = new FlatCheckBox();
+            EnableMod = new FlatCheckBox();
+            AutoUpdate = new FlatCheckBox();
 
             Done_Button = new FlatButton();
             SaveHint = new Label();
@@ -48,8 +48,8 @@ namespace KartRider
             BgCard_Slider = new FlatSlider();
             BgOpacity_Value = new Label();
             BgCard_Value = new Label();
-            DarkModeCheck = new CheckBox();
-            FrostedCheck = new CheckBox();
+            DarkModeCheck = new FlatCheckBox();
+            FrostedCheck = new FlatCheckBox();
 
             SuspendLayout();
 
@@ -247,45 +247,33 @@ namespace KartRider
 
             NgsOn.Name = "NgsOn";
             NgsOn.Text = "NgsOn";
-            NgsOn.AutoSize = true;
-            NgsOn.FlatStyle = FlatStyle.Flat;
             NgsOn.Font = Theme.F(9.5f);
-            NgsOn.ForeColor = Theme.TextPrimary;
-            NgsOn.BackColor = Theme.Surface;
             NgsOn.Location = new Point(290, 48);
+            NgsOn.Size = new Size(86, 22);
             NgsOn.TabIndex = 8;
             CardGame.Controls.Add(NgsOn);
 
             SoloRank.Name = "SoloRank";
             SoloRank.Text = "单人排位";
-            SoloRank.AutoSize = true;
-            SoloRank.FlatStyle = FlatStyle.Flat;
             SoloRank.Font = Theme.F(9.5f);
-            SoloRank.ForeColor = Theme.TextPrimary;
-            SoloRank.BackColor = Theme.Surface;
             SoloRank.Location = new Point(290, 84);
+            SoloRank.Size = new Size(86, 22);
             SoloRank.TabIndex = 9;
             CardGame.Controls.Add(SoloRank);
 
             EnableMod.Name = "EnableMod";
             EnableMod.Text = "启用 MOD";
-            EnableMod.AutoSize = true;
-            EnableMod.FlatStyle = FlatStyle.Flat;
             EnableMod.Font = Theme.F(9.5f);
-            EnableMod.ForeColor = Theme.TextPrimary;
-            EnableMod.BackColor = Theme.Surface;
             EnableMod.Location = new Point(290, 120);
+            EnableMod.Size = new Size(106, 22);
             EnableMod.TabIndex = 10;
             CardGame.Controls.Add(EnableMod);
 
             AutoUpdate.Name = "AutoUpdate";
             AutoUpdate.Text = "自动更新游戏";
-            AutoUpdate.AutoSize = true;
-            AutoUpdate.FlatStyle = FlatStyle.Flat;
             AutoUpdate.Font = Theme.F(9.5f);
-            AutoUpdate.ForeColor = Theme.TextPrimary;
-            AutoUpdate.BackColor = Theme.Surface;
             AutoUpdate.Location = new Point(290, 156);
+            AutoUpdate.Size = new Size(118, 22);
             AutoUpdate.TabIndex = 11;
             CardGame.Controls.Add(AutoUpdate);
 
@@ -427,24 +415,18 @@ namespace KartRider
 
             DarkModeCheck.Name = "DarkModeCheck";
             DarkModeCheck.Text = "深色模式";
-            DarkModeCheck.AutoSize = true;
-            DarkModeCheck.FlatStyle = FlatStyle.Flat;
             DarkModeCheck.Font = Theme.F(9.5f);
-            DarkModeCheck.ForeColor = Theme.TextPrimary;
-            DarkModeCheck.BackColor = Theme.Surface;
             DarkModeCheck.Location = new Point(96, 208);
+            DarkModeCheck.Size = new Size(96, 22);
             DarkModeCheck.TabIndex = 19;
             DarkModeCheck.CheckedChanged += DarkModeCheck_CheckedChanged;
             CardAppearance.Controls.Add(DarkModeCheck);
 
             FrostedCheck.Name = "FrostedCheck";
             FrostedCheck.Text = "毛玻璃效果";
-            FrostedCheck.AutoSize = true;
-            FrostedCheck.FlatStyle = FlatStyle.Flat;
             FrostedCheck.Font = Theme.F(9.5f);
-            FrostedCheck.ForeColor = Theme.TextPrimary;
-            FrostedCheck.BackColor = Theme.Surface;
             FrostedCheck.Location = new Point(212, 208);
+            FrostedCheck.Size = new Size(110, 22);
             FrostedCheck.TabIndex = 20;
             FrostedCheck.CheckedChanged += FrostedCheck_CheckedChanged;
             CardAppearance.Controls.Add(FrostedCheck);
@@ -506,8 +488,8 @@ namespace KartRider
         private FlatSlider BgCard_Slider;
         private Label BgOpacity_Value;
         private Label BgCard_Value;
-        private CheckBox DarkModeCheck;
-        private CheckBox FrostedCheck;
+        private FlatCheckBox DarkModeCheck;
+        private FlatCheckBox FrostedCheck;
 
         private Label Name_label;
         private FlatTextBox PlayerName;
@@ -528,10 +510,10 @@ namespace KartRider
         private Label Proxy_label;
         private FlatComboBox Proxy_comboBox;
 
-        private CheckBox NgsOn;
-        private CheckBox SoloRank;
-        private CheckBox EnableMod;
-        private CheckBox AutoUpdate;
+        private FlatCheckBox NgsOn;
+        private FlatCheckBox SoloRank;
+        private FlatCheckBox EnableMod;
+        private FlatCheckBox AutoUpdate;
 
         private FlatButton Done_Button;
         private Label SaveHint;

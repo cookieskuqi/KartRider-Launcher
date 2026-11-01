@@ -153,6 +153,39 @@ namespace KartRider
 
             ContentPanel.BackColor = (windowMode && hasImage) ? Color.Transparent : Theme.Bg;
 
+            // 公告区是 RichTextBox（为了能选中/复制），只能是不透明底色：
+            // 取它所在区域背景图的平均色，再按卡片透明度与卡片色合成，让接缝尽量看不出来
+            Image backdropImage = windowMode ? windowWallpaper : ContentPanel.CurrentImage;
+            Color noticeBack = Theme.Surface;
+            if (hasImage && backdropImage != null)
+            {
+                Rectangle areaBounds;
+                Rectangle noticeArea;
+                if (windowMode)
+                {
+                    areaBounds = new Rectangle(0, 0, ClientSize.Width, ClientSize.Height);
+                    noticeArea = new Rectangle(
+                        ContentPanel.Left + CardNotice.Left + NoticeBox.Left,
+                        ContentPanel.Top + CardNotice.Top + NoticeBox.Top,
+                        NoticeBox.Width, NoticeBox.Height);
+                }
+                else
+                {
+                    areaBounds = new Rectangle(0, 0, ContentPanel.Width, ContentPanel.Height);
+                    noticeArea = new Rectangle(
+                        CardNotice.Left + NoticeBox.Left,
+                        CardNotice.Top + NoticeBox.Top,
+                        NoticeBox.Width, NoticeBox.Height);
+                }
+
+                Color average = Theme.AverageColor(backdropImage, areaBounds, noticeArea);
+                if (average.A > 0)
+                {
+                    noticeBack = Theme.Blend(average, Theme.Surface, cardAlpha);
+                }
+            }
+            NoticeBox.SetBackdrop(noticeBack);
+
             Invalidate(true);
             SidePanel.Invalidate(true);
         }

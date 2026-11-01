@@ -36,6 +36,11 @@ namespace KartRider.Ui
                         check.BackColor = Color.Transparent;
                         check.ForeColor = Theme.TextPrimary;
                         break;
+                    case FlatCheckBox flatCheck:
+                        flatCheck.BackColor = Color.Transparent;
+                        flatCheck.ForeColor = Theme.TextPrimary;
+                        flatCheck.Invalidate();
+                        break;
                     case FlatTextBox box:
                         box.BackColor = Theme.Field;
                         box.RefreshTheme();
@@ -46,6 +51,9 @@ namespace KartRider.Ui
                     case FlatSlider slider:
                         slider.Surface = Theme.Surface;
                         slider.Invalidate();
+                        break;
+                    case NoticeView notice:
+                        notice.RefreshTheme();
                         break;
                     case FlatButton button:
                         button.Invalidate();

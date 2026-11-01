@@ -56,6 +56,12 @@ namespace KartRider.Ui
             get { return path; }
         }
 
+        /// <summary>当前加载的图片（没有则为 null）。</summary>
+        public Image CurrentImage
+        {
+            get { return image; }
+        }
+
         /// <summary>设置（或清除）背景图。传空字符串即恢复默认底色。</summary>
         public void SetImage(string file)
         {
