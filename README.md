@@ -5,6 +5,12 @@
 > 原版发布页：https://github.com/yanygm/Launcher_V2/releases/tag/261031
 > 本项目保留了原版的全部核心功能，改动集中在「服务器地址管理」和「界面 / 外观」两块。
 
+## 下载
+
+直接到 **[Releases](https://github.com/cookieskuqi/KartRider-Launcher/releases/latest)** 下载 `Launcher.exe`（单文件，需要 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)）。
+
+`latest` 这个 Release 会随每次推送到 `main` 自动更新；也可以自己 clone 下来编译，见下方「构建」。
+
 ## 相比原版新增的功能
 
 ### 服务器地址管理

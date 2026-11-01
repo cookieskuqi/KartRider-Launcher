@@ -402,7 +402,8 @@ namespace KartRider
 
         private void GitHub_Click(object sender, EventArgs e)
         {
-            string url = "https://yanygm.github.io/Launcher_V2/";
+            // 本项目自己的仓库主页（原版是 yanygm.github.io/Launcher_V2）
+            string url = "https://github.com/cookieskuqi/KartRider-Launcher";
             try
             {
                 Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

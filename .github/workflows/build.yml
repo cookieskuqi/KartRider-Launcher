@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: 编译单文件 exe
+        run: >
+          dotnet publish Launcher.csproj
+          --runtime win-x64
+          -p:PublishSingleFile=true
+          -p:AssemblyName=Launcher
+          -o out -c Release --no-self-contained
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Launcher-${{ github.sha }}
+          path: out/Launcher.exe
+          retention-days: 30
+
+      - name: 更新 latest 发布（main 分支）
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: 最新构建
+          body: |
+            自动构建，来自提交 ${{ github.sha }}
+
+            基于 [yanygm/Launcher_V2](https://github.com/yanygm/Launcher_V2/releases/tag/261031) 的 261031 版本修改。
+          files: out/Launcher.exe
+          make_latest: true
+
+      - name: 发布版本（打 v* tag 时）
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/Launcher.exe
+          generate_release_notes: true
