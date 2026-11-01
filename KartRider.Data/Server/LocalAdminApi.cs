@@ -178,6 +178,18 @@ namespace KartRider
                             await WriteAsync(stream, 200, "application/json", MatchRecorder.QueryMatches(n, nick)).ConfigureAwait(false);
                             break;
                         }
+                        case "/api/appearance":
+                        {
+                            // 玩家当前装扮：/api/appearance?nickname=酷奇
+                            string nick = GetQuery(query, "nickname");
+                            if (string.IsNullOrWhiteSpace(nick))
+                            {
+                                await WriteAsync(stream, 400, "text/plain", "nickname is required").ConfigureAwait(false);
+                                break;
+                            }
+                            await WriteAsync(stream, 200, "application/json", ItemCatalog.BuildAppearance(nick)).ConfigureAwait(false);
+                            break;
+                        }
                         case "/api/userlist":
                             await WriteAsync(stream, 200, "application/json", MatchRecorder.UserList()).ConfigureAwait(false);
                             break;

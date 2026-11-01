@@ -39,6 +39,9 @@ namespace KartRider
   .r3 { color:#b07a4a; font-weight:700; }
   .dnf { color:#e5484d; }
   .me { color:#4c9eea; font-weight:700; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .chip { background:#f5f7fb; border-radius:8px; padding:6px 10px; font-size:12px; }
+  .chip b { color:#4c9eea; margin-right:4px; }
   .empty { color:#8a919c; font-size:13px; padding:10px 0; }
   @media (prefers-color-scheme: dark) {
     body { background:#1e2126; color:#e6e9ef; }
@@ -64,6 +67,11 @@ namespace KartRider
   </div>
 
   <div class=""card"">
+    <b style=""font-size:14px"">当前装扮</b>
+    <div id=""appearance""><div class=""empty"">输入昵称后查看</div></div>
+  </div>
+
+  <div class=""card"">
     <b style=""font-size:14px"">最近对局</b>
     <div id=""matches""><div class=""empty"">暂无记录</div></div>
   </div>
@@ -86,6 +94,7 @@ function rankClass(rank, dnf) { return dnf ? 'dnf' : (rank === 1 ? 'r1' : rank =
 function load() {
   var nick = document.getElementById('nick').value.trim();
   renderUser(nick);
+  renderAppearance(nick);
   renderMatches(nick);
   if (nick) localStorage.setItem('kr-last-nick', nick);
 }
@@ -116,6 +125,22 @@ function timeText(ms) {
   var ss = Math.floor((total % 60000) / 1000);
   var cc = Math.floor((total % 1000) / 10);
   return pad(mm) + '.' + pad(ss) + '.' + pad(cc);
+}
+
+function renderAppearance(nick) {
+  var box = document.getElementById('appearance');
+  if (!nick) { box.innerHTML = '<div class=""empty"">输入昵称后查看</div>'; return; }
+  api('/api/appearance?nickname=' + encodeURIComponent(nick)).then(function (a) {
+    if (!a.found || !a.items || !a.items.length) {
+      box.innerHTML = '<div class=""empty"">没有装扮数据（该玩家需要登录过一次服务器）</div>';
+      return;
+    }
+    var chips = a.items.map(function (it) {
+      return '<span class=""chip""><b>' + esc(it.label) + '</b>' + esc(it.name) + '</span>';
+    }).join('');
+    box.innerHTML = '<div class=""chips"">' + chips + '</div>' +
+      (a.catalogReady ? '' : '<div class=""empty"">物品目录正在后台解析，稍后刷新可显示名称</div>');
+  }).catch(function () { box.innerHTML = '<div class=""empty"">查询失败</div>' });
 }
 
 function renderMatches(nick) {
