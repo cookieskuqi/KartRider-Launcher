@@ -72,11 +72,17 @@ public class PatchManager
             var content = await File.ReadAllTextAsync(PatchListPath);
             var lines = content.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
             var items = ParsePatchLines(lines);
+            if (items.Count == 0)
+            {
+                throw new Exception("补丁列表 NT.txf 解析为空，可能是下载不完整，请重试。");
+            }
             Log.Info($"获取到 {items.Count} 个文件，开始校验更新...\n");
 
             // 第一阶段：并行校验所有文件，收集需要下载的文件
             Log.Info($"开始并行校验文件...");
             var filesToDownload = new List<PatchItem>();
+            var failedFiles = new List<string>();
+            var failLock = new object();
             int checkedCount = 0;
             var checkLock = new object();
 
@@ -116,6 +122,12 @@ public class PatchManager
                     }
                     catch (Exception ex)
                     {
+                        // 以前这里只打一行日志就继续，最后照样打印"全部更新完成"，
+                        // 结果是玩家带着缺失/损坏的文件进游戏 → 闪退。现在记下来统一处理。
+                        lock (failLock)
+                        {
+                            failedFiles.Add($"{item.LocalPath}\t{ex.Message}");
+                        }
                         Log.Info($"[下载失败] {item.LocalPath}: {ex.Message}");
                     }
                     finally
@@ -125,6 +137,32 @@ public class PatchManager
                 }).ToArray();
 
                 await Task.WhenAll(downloadTasks);
+            }
+
+            if (failedFiles.Count > 0)
+            {
+                // 失败清单落盘，方便玩家反馈 / 排查
+                try
+                {
+                    var report = new System.Text.StringBuilder();
+                    report.AppendLine($"更新未完成：{failedFiles.Count}/{filesToDownload.Count} 个文件下载失败");
+                    report.AppendLine("可能原因：网络中断、服务器上文件缺失、游戏正在运行导致文件被占用。");
+                    report.AppendLine();
+                    foreach (string line in failedFiles)
+                    {
+                        report.AppendLine(line);
+                    }
+                    File.WriteAllText(Path.Combine(gamePath, "update-failed.txt"), report.ToString(), new UTF8Encoding(false));
+                }
+                catch (Exception ex)
+                {
+                    Log.Info($"写入失败清单出错: {ex.Message}");
+                }
+
+                // 关键：不写 LK.txf，避免客户端误以为这些文件已是最新
+                Log.Info($"\n=== 更新未完成：{failedFiles.Count} 个文件失败，已中止 ===");
+                throw new Exception($"有 {failedFiles.Count} 个文件未能下载完整，更新已中止。\r\n" +
+                                    "游戏文件不完整时启动会闪退，请检查网络后重新打开启动器重试（详情见游戏目录下的 update-failed.txt）。");
             }
 
             Log.Info($"\n=== 全部更新完成 ===");
@@ -151,6 +189,36 @@ public class PatchManager
             Log.Info($"\n更新过程发生严重错误: {ex.Message}");
             Log.Info($"堆栈: {ex.StackTrace}");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// 把下载好的临时文件覆盖到目标位置。目标被占用时（游戏还开着）重试几次，
+    /// 全程不删除原文件，避免中途失败留下"文件缺失"。
+    /// </summary>
+    private static void MoveIntoPlace(string tempFile, string targetPath)
+    {
+        string dir = Path.GetDirectoryName(targetPath);
+        if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        for (int attempt = 0; ; attempt++)
+        {
+            try
+            {
+                File.Move(tempFile, targetPath, true);
+                return;
+            }
+            catch (IOException) when (attempt < 3)
+            {
+                System.Threading.Thread.Sleep(250 * (attempt + 1));
+            }
+            catch (UnauthorizedAccessException) when (attempt < 3)
+            {
+                System.Threading.Thread.Sleep(250 * (attempt + 1));
+            }
         }
     }
 
@@ -231,13 +299,10 @@ public class PatchManager
                 throw new Exception("MD5校验失败");
             }
 
-            // 移动到目标位置
-            var dir = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-            File.Move(tempFile, filePath);
+            // 移动到目标位置：用 Move(overwrite) 直接覆盖，失败会重试。
+            // 原实现是"先 Delete 再 Move"，一旦 Move 因为文件被占用/磁盘错误失败，
+            // 原来的好文件已经被删掉，游戏就少了一个文件。
+            MoveIntoPlace(tempFile, filePath);
         }
         catch (Exception ex)
         {
@@ -377,13 +442,10 @@ public class PatchManager
                 return;
             }
 
-            // 移动到目标位置
-            var dir = Path.GetDirectoryName(filePath);
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-            File.Move(tempFile, filePath);
+            // 移动到目标位置：用 Move(overwrite) 直接覆盖，失败会重试。
+            // 原实现是"先 Delete 再 Move"，一旦 Move 因为文件被占用/磁盘错误失败，
+            // 原来的好文件已经被删掉，游戏就少了一个文件。
+            MoveIntoPlace(tempFile, filePath);
 
             Log.Info($"→ {filePath} 更新成功！\n");
         }
