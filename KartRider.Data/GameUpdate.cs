@@ -19,13 +19,26 @@ using KartRider.Logging;
 
 namespace KartRider;
 
+/// <summary>一次补丁/校验的结果统计。</summary>
+public class PatchSummary
+{
+    /// <summary>清单里的文件总数。</summary>
+    public int Total { get; set; }
+
+    /// <summary>本次实际下载（修复）的文件数。</summary>
+    public int Downloaded { get; set; }
+
+    /// <summary>失败的文件数（失败时会抛异常，这里一般是 0）。</summary>
+    public int Failed { get; set; }
+}
+
 public class PatchManager
 {
     // 配置
     private const int MaxRetryCount = 3;
     private const int MaxParallelDownloads = 4; // 同时下载文件数
 
-    public async Task StartPatchAsync(string update_prefix, string gamePath)
+    public async Task<PatchSummary> StartPatchAsync(string update_prefix, string gamePath, Action<string> progress = null)
     {
         try
         {
@@ -39,6 +52,7 @@ public class PatchManager
             string LocalPatchListPath = Path.Combine(gamePath, "LK.txf");
 
             ServicePointManager.DefaultConnectionLimit = 100;
+            progress?.Invoke("正在获取补丁列表…");
             Log.Info($"=== 跑跑卡丁车自动更新器 ===");
 
             if (!Directory.Exists(TempPath))
@@ -76,6 +90,7 @@ public class PatchManager
             {
                 throw new Exception("补丁列表 NT.txf 解析为空，可能是下载不完整，请重试。");
             }
+            progress?.Invoke($"共 {items.Count} 个文件，开始逐个校验…");
             Log.Info($"获取到 {items.Count} 个文件，开始校验更新...\n");
 
             // 第一阶段：并行校验所有文件，收集需要下载的文件
@@ -101,6 +116,10 @@ public class PatchManager
                     {
                         Log.Info($"[{checkedCount}/{items.Count}] {item.LocalPath} 已最新");
                     }
+                    if (checkedCount % 25 == 0)
+                    {
+                        progress?.Invoke($"正在校验文件… {checkedCount}/{items.Count}");
+                    }
                 }
             });
 
@@ -110,7 +129,9 @@ public class PatchManager
             if (filesToDownload.Count > 0)
             {
                 Log.Info($"开始并行下载（最多 {MaxParallelDownloads} 个文件同时下载）...\n");
+                progress?.Invoke($"发现 {filesToDownload.Count} 个文件需要下载/修复");
                 var semaphore = new SemaphoreSlim(MaxParallelDownloads);
+                int doneCount = 0;
                 var downloadTasks = filesToDownload.Select(async item =>
                 {
                     await semaphore.WaitAsync();
@@ -119,6 +140,8 @@ public class PatchManager
                         Log.Info($"[下载开始] {item.LocalPath}");
                         await ProcessFileDownloadAsync(item, baseUri, TempPath, gamePath);
                         Log.Info($"[下载完成] {item.LocalPath}");
+                        int done = System.Threading.Interlocked.Increment(ref doneCount);
+                        progress?.Invoke($"正在修复文件… {done}/{filesToDownload.Count}");
                     }
                     catch (Exception ex)
                     {
@@ -165,6 +188,7 @@ public class PatchManager
                                     "游戏文件不完整时启动会闪退，请检查网络后重新打开启动器重试（详情见游戏目录下的 update-failed.txt）。");
             }
 
+            progress?.Invoke("文件校验完成");
             Log.Info($"\n=== 全部更新完成 ===");
 
             // NT.txf 已包含全部条目，直接以它为基准生成 LK.txf，并与原 LK.txf 对比标注变化
@@ -183,6 +207,13 @@ public class PatchManager
             {
                 Log.Info($"生成补丁列表失败: {ex.Message}");
             }
+
+            return new PatchSummary
+            {
+                Total = items.Count,
+                Downloaded = filesToDownload.Count,
+                Failed = 0
+            };
         }
         catch (Exception ex)
         {

@@ -372,6 +372,37 @@ namespace KartRider
             RefreshNotice();
         }
 
+        /// <summary>校验并修复游戏文件。</summary>
+        private void Verify_Button_Click(object sender, EventArgs e)
+        {
+            if (System.Diagnostics.Process.GetProcessesByName("KartRider").Length > 0)
+            {
+                MessageBox.Show(this, "游戏正在运行，请先退出游戏再校验文件。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string dir = string.IsNullOrWhiteSpace(kartRiderDirectory)
+                ? (Program.LauncherDlg == null ? null : Program.LauncherDlg.kartRiderDirectory)
+                : kartRiderDirectory;
+
+            if (string.IsNullOrWhiteSpace(dir))
+            {
+                MessageBox.Show(this, "没有找到游戏目录，无法校验。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var dialog = new VerifyDialog(dir))
+            {
+                dialog.ShowDialog(this);
+            }
+
+            // 文件可能被更新过，版本号随之变化
+            ClientVersion.Text = ProfileService.SettingConfig.ClientVersion.ToString();
+            RefreshServerInfo();
+        }
+
         /// <summary>左侧导航与内容区之间的 1px 分隔线。</summary>
         private void SidePanel_Paint(object sender, PaintEventArgs e)
         {

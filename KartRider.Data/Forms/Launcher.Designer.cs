@@ -15,6 +15,7 @@ namespace KartRider
             Setting_Button = new FlatButton();
             button_ToggleTerminal = new FlatButton();
             ConsoleLogger = new FlatButton();
+            Verify_Button = new FlatButton();
             SideFoot = new Label();
 
             CardServer = new CardPanel();
@@ -105,6 +106,17 @@ namespace KartRider
             SideFoot.Text = "单机版 · 仅供个人使用";
             SideFoot.Font = Theme.F(8f);
             SideFoot.ForeColor = Theme.TextSecondary;
+            Verify_Button.Name = "Verify_Button";
+            Verify_Button.Text = "校验游戏文件";
+            Verify_Button.Style = FlatButtonStyle.Ghost;
+            Verify_Button.Surface = Theme.Surface;
+            Verify_Button.Radius = 9;
+            Verify_Button.Location = new Point(14, 220);
+            Verify_Button.Size = new Size(162, 42);
+            Verify_Button.TextAlign = ContentAlignment.MiddleLeft;
+            Verify_Button.Font = Theme.F(9.5f);
+            Verify_Button.Click += Verify_Button_Click;
+
             SideFoot.Tag = Roles.Secondary;
             SideFoot.BackColor = Theme.Surface;
             SideFoot.Location = new Point(16, 502);
@@ -113,6 +125,7 @@ namespace KartRider
             SidePanel.Controls.Add(Setting_Button);
             SidePanel.Controls.Add(button_ToggleTerminal);
             SidePanel.Controls.Add(ConsoleLogger);
+            SidePanel.Controls.Add(Verify_Button);
             SidePanel.Controls.Add(SideFoot);
 
             // ---------- 右侧内容 ----------
@@ -278,6 +291,7 @@ namespace KartRider
         private FlatButton Setting_Button;
         private FlatButton button_ToggleTerminal;
         private FlatButton ConsoleLogger;
+        private FlatButton Verify_Button;
         private Label SideFoot;
 
         private CardPanel CardServer;
