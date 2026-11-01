@@ -661,7 +661,19 @@ namespace KartRider
             BgCard_Slider.Surface = Theme.Surface;
 
             ApplyChromeWash(255);
-            Invalidate(true);
+
+            // 逐个控件强制重绘，否则切主题后会留下旧配色的残影
+            RepaintAll(this);
+        }
+
+        private static void RepaintAll(Control root)
+        {
+            root.Invalidate(true);
+            foreach (Control child in root.Controls)
+            {
+                RepaintAll(child);
+            }
+            root.Update();
         }
 
         private void OnLoad(object sender, EventArgs e)

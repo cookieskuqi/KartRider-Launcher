@@ -149,6 +149,8 @@ namespace KartRider
             Setting_Button.Surface = surface;
             button_ToggleTerminal.Surface = surface;
             ConsoleLogger.Surface = surface;
+            Verify_Button.Surface = surface;
+            NoticeEdit_Button.Surface = surface;
             SideFoot.BackColor = surface;
 
             ContentPanel.BackColor = (windowMode && hasImage) ? Color.Transparent : Theme.Bg;
@@ -291,7 +293,18 @@ namespace KartRider
             // 卡片里的按钮不归导航那套逻辑管，这里单独跟随色板
             IPChange_Button.Surface = Theme.Surface;
 
-            Invalidate(true);
+            RepaintAll(this);
+        }
+
+        /// <summary>换肤后把所有子控件都标记重绘并立刻刷新，避免留下旧颜色的残影。</summary>
+        private static void RepaintAll(Control root)
+        {
+            root.Invalidate(true);
+            foreach (Control child in root.Controls)
+            {
+                RepaintAll(child);
+            }
+            root.Update();
         }
 
         protected override void OnPaintBackground(PaintEventArgs e)
