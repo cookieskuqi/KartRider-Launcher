@@ -32,6 +32,16 @@ public class PatchSummary
     public int Failed { get; set; }
 }
 
+/// <summary>本地校验结果（对照游戏目录里的 LK.txf）。</summary>
+public class LocalVerifyResult
+{
+    /// <summary>清单里的条目数；0 表示没有本地清单，无法校验。</summary>
+    public int Total { get; set; }
+
+    /// <summary>不一致的条目（缺失 / 大小不符 / MD5 不符）。</summary>
+    public List<string> Details { get; } = new List<string>();
+}
+
 public class PatchManager
 {
     // 配置
@@ -221,6 +231,87 @@ public class PatchManager
             Log.Info($"堆栈: {ex.StackTrace}");
             throw;
         }
+    }
+
+    /// <summary>
+    /// 不依赖服务器的本地校验：游戏目录里的 LK.txf 记录了每个文件的 MD5，
+    /// 逐个比对就能发现缺失或损坏（缺点是只能发现、不能自动修复）。
+    /// </summary>
+    public async Task<LocalVerifyResult> VerifyLocalAsync(string gamePath, Action<string> progress = null)
+    {
+        var result = new LocalVerifyResult();
+
+        string lkPath = Path.Combine(gamePath, "LK.txf");
+        if (!File.Exists(lkPath))
+        {
+            return result;
+        }
+
+        var entries = new List<(string RelPath, string Md5, long Size)>();
+        foreach (string line in await File.ReadAllLinesAsync(lkPath))
+        {
+            string[] parts = line.Split(':');
+            if (parts.Length < 4)
+            {
+                continue;
+            }
+            string rel = parts[1].TrimStart('\\').Replace('\\', '/').Trim();
+            string md5 = parts[2].Trim();
+            long size = 0;
+            long.TryParse(parts[3].TrimEnd('l'), out size);
+            if (rel.Length == 0 || md5.Length == 0)
+            {
+                continue;
+            }
+            entries.Add((rel, md5, size));
+        }
+
+        result.Total = entries.Count;
+        if (entries.Count == 0)
+        {
+            return result;
+        }
+
+        int done = 0;
+        foreach (var entry in entries)
+        {
+            string full = Path.Combine(gamePath, entry.RelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(full))
+            {
+                result.Details.Add(entry.RelPath + "（缺失）");
+            }
+            else
+            {
+                try
+                {
+                    if (entry.Size > 0 && new FileInfo(full).Length != entry.Size)
+                    {
+                        result.Details.Add(entry.RelPath + "（大小不一致）");
+                    }
+                    else
+                    {
+                        string actual = await Task.Run(() => GetFileMd5(full));
+                        if (!string.Equals(actual, entry.Md5, StringComparison.OrdinalIgnoreCase))
+                        {
+                            result.Details.Add(entry.RelPath + "（内容不一致）");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Details.Add(entry.RelPath + "（无法读取：" + ex.Message + "）");
+                }
+            }
+
+            done++;
+            if (done % 25 == 0)
+            {
+                progress?.Invoke($"正在校验文件… {done}/{entries.Count}");
+            }
+        }
+
+        progress?.Invoke("本地校验完成");
+        return result;
     }
 
     /// <summary>

@@ -21,7 +21,9 @@ namespace KartRider.Ui
             SetStyle(ControlStyles.UserPaint
                 | ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw, true);
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
             Surface = Theme.Surface;
             Size = new Size(180, 26);
             Cursor = Cursors.Hand;
@@ -80,10 +82,6 @@ namespace KartRider.Ui
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            using (var bg = new SolidBrush(Surface))
-            {
-                g.FillRectangle(bg, ClientRectangle);
-            }
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
             Rectangle track = TrackBounds;

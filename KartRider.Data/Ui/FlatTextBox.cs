@@ -19,9 +19,11 @@ namespace KartRider.Ui
             SetStyle(ControlStyles.UserPaint
                 | ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw, true);
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.SupportsTransparentBackColor, true);
 
-            BackColor = Theme.Field;
+            // 底色交给父容器（卡片可能是半透明的），自己只画圆角块
+            BackColor = Color.Transparent;
             Size = new Size(160, 30);
 
             editor.BorderStyle = BorderStyle.None;
@@ -109,11 +111,6 @@ namespace KartRider.Ui
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            using (var bg = new SolidBrush(surface))
-            {
-                g.FillRectangle(bg, ClientRectangle);
-            }
-
             var box = new Rectangle(0, 0, Width, Height);
             Theme.Fill(g, box, 6, Theme.Field);
             bool focused = editor.Focused;

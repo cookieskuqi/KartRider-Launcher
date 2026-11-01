@@ -42,7 +42,6 @@ namespace KartRider.Ui
                         flatCheck.Invalidate();
                         break;
                     case FlatTextBox box:
-                        box.BackColor = Theme.Field;
                         box.RefreshTheme();
                         break;
                     case FlatComboBox combo:

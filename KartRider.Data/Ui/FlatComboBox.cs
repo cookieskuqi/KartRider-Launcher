@@ -32,10 +32,12 @@ namespace KartRider.Ui
             SetStyle(ControlStyles.UserPaint
                 | ControlStyles.AllPaintingInWmPaint
                 | ControlStyles.OptimizedDoubleBuffer
-                | ControlStyles.ResizeRedraw, true);
+                | ControlStyles.ResizeRedraw
+                | ControlStyles.SupportsTransparentBackColor, true);
 
             Font = Theme.F(9.5f);
-            BackColor = Theme.Field;
+            // 底色由父容器绘制，避免半透明卡片上出现方角色块
+            BackColor = Color.Transparent;
             Size = new Size(160, 30);
 
             editor.BorderStyle = BorderStyle.None;
@@ -202,11 +204,6 @@ namespace KartRider.Ui
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            using (var bg = new SolidBrush(surface))
-            {
-                g.FillRectangle(bg, ClientRectangle);
-            }
-
             var box = new Rectangle(0, 0, Width, Height);
             Theme.Fill(g, box, 6, Theme.Field);
             Theme.Stroke(g, box, 6, hovered || opened ? Theme.Accent : Theme.Border);

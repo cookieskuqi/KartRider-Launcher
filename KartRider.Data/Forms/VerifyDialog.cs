@@ -119,31 +119,18 @@ namespace KartRider
 
             try
             {
+                IProgress<string> progress = new Progress<string>(text => StatusLabel.Text = text);
+
                 var probe = await Task.Run(() => PatchManager.GetUpdateAsync());
                 string updateUrl = probe.Item1;
                 if (string.IsNullOrWhiteSpace(updateUrl))
                 {
-                    // 本机单机模式（127.0.0.1）没有服务端给补丁地址，这里退化成"关键文件自检"
-                    var missing = CheckLocalFiles(gamePath);
-                    if (missing.Count == 0)
-                    {
-                        Finish(false,
-                            "当前服务器没有返回补丁地址。\r\n" +
-                            "如果你连的是本机（127.0.0.1）单机模式，本身就没有在线补丁源，属于正常现象。\r\n" +
-                            "已完成本地关键文件检查：未发现缺失。要完整校验请切到远程服务器后重试。");
-                    }
-                    else
-                    {
-                        Finish(false,
-                            "当前服务器没有返回补丁地址，且本地关键文件有缺失：\r\n" +
-                            string.Join("\r\n", missing.Take(6)) +
-                            (missing.Count > 6 ? $"\r\n…共 {missing.Count} 项" : "") +
-                            "\r\n建议重新安装游戏或把文件补齐。");
-                    }
+                    // 服务器没给补丁地址（本机单机模式，或服务端没配补丁源）：
+                    // 退回"对照本地 LK.txf 逐个校验"，至少能查出哪些文件坏了
+                    await VerifyLocallyAsync(progress);
                     return;
                 }
 
-                IProgress<string> progress = new Progress<string>(text => StatusLabel.Text = text);
                 PatchSummary summary = await Task.Run(() => new PatchManager()
                     .StartPatchAsync(updateUrl, gamePath, text => progress.Report(text)));
 
@@ -159,6 +146,53 @@ namespace KartRider
                 Log.Info($"[Verify] 校验失败: {ex}");
                 Finish(false, "校验未完成：" + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// 没有补丁源时的兜底：用游戏目录里的 LK.txf（记录了每个文件的 MD5）逐个校验。
+        /// 只能发现问题，不能自动修复 —— 修复仍然需要能拿到补丁文件。
+        /// </summary>
+        private async Task VerifyLocallyAsync(IProgress<string> progress)
+        {
+            StatusLabel.Text = "服务器没有提供补丁地址，改用本地清单校验…";
+
+            LocalVerifyResult local = await Task.Run(() => new PatchManager()
+                .VerifyLocalAsync(gamePath, text => progress.Report(text)));
+
+            if (local.Total == 0)
+            {
+                // 连本地清单都没有，只能查几个关键文件
+                var missing = CheckLocalFiles(gamePath);
+                if (missing.Count == 0)
+                {
+                    Finish(false,
+                        "服务器没有返回补丁地址，游戏目录里也没有 LK.txf 清单，无法做完整校验。\r\n" +
+                        "已检查关键文件：未发现缺失。");
+                }
+                else
+                {
+                    Finish(false,
+                        "服务器没有返回补丁地址，且本地关键文件有缺失：\r\n" +
+                        string.Join("\r\n", missing.Take(6)) +
+                        (missing.Count > 6 ? $"\r\n…共 {missing.Count} 项" : ""));
+                }
+                return;
+            }
+
+            if (local.Details.Count == 0)
+            {
+                Finish(true,
+                    $"本地校验完成：对照 LK.txf 共检查 {local.Total} 个文件，未发现缺失或损坏。\r\n" +
+                    "当前服务器没有提供补丁源，所以只做了本地比对（发现问题的文件无法自动修复）。");
+                return;
+            }
+
+            var lines = local.Details.Take(8).ToList();
+            string more = local.Details.Count > 8 ? $"\r\n…共 {local.Details.Count} 个文件不一致" : "";
+            Finish(false,
+                $"本地校验完成：对照 LK.txf 共检查 {local.Total} 个文件，{local.Details.Count} 个不一致：\r\n" +
+                string.Join("\r\n", lines) + more +
+                "\r\n\r\n这些文件很可能就是闪退的原因。当前服务器没有补丁源，需要重新安装或从服务器补文件。");
         }
 
         /// <summary>没有补丁源时退而求其次：检查启动游戏必需的关键文件是否存在且非空。</summary>
