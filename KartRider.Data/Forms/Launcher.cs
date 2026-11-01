@@ -446,10 +446,13 @@ namespace KartRider
 
         private void SyncGameButton()
         {
-            string text = IsGameRunning() ? "结束游戏" : "启动游戏";
-            if (Start_Button.Text != text)
+            bool running = IsGameRunning();
+            string text = running ? "结束游戏" : "启动游戏";
+            var style = running ? FlatButtonStyle.Danger : FlatButtonStyle.Primary;
+            if (Start_Button.Text != text || Start_Button.Style != style)
             {
                 Start_Button.Text = text;
+                Start_Button.Style = style;
                 Start_Button.Invalidate();
             }
         }

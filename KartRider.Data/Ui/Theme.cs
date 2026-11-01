@@ -28,6 +28,8 @@ namespace KartRider.Ui
         public static Color AccentSoft { get; private set; } = Color.FromArgb(0xE9, 0xF2, 0xFD);
 
         public static Color Danger { get; private set; } = Color.FromArgb(0xE5, 0x48, 0x4D);
+        public static Color DangerHover { get; private set; } = Color.FromArgb(0xF0, 0x6A, 0x6E);
+        public static Color DangerDown { get; private set; } = Color.FromArgb(0xC9, 0x3A, 0x3F);
         public static Color HoverBg { get; private set; } = Color.FromArgb(0xF0, 0xF3, 0xF8);
 
         /// <summary>输入框/下拉框的底色：比卡片略深一点，白卡片上才看得出边界。</summary>
@@ -57,6 +59,8 @@ namespace KartRider.Ui
                 AccentDown = Color.FromArgb(0x45, 0x92, 0xD6);
                 AccentSoft = Color.FromArgb(0x26, 0x3B, 0x52);
                 Danger = Color.FromArgb(0xE5, 0x48, 0x4D);
+                DangerHover = Color.FromArgb(0xF0, 0x6A, 0x6E);
+                DangerDown = Color.FromArgb(0xC9, 0x3A, 0x3F);
                 HoverBg = Color.FromArgb(0x33, 0x38, 0x40);
                 Field = Color.FromArgb(0x1B, 0x1E, 0x23);
             }
@@ -72,6 +76,8 @@ namespace KartRider.Ui
                 AccentDown = Color.FromArgb(0x2F, 0x7F, 0xC8);
                 AccentSoft = Color.FromArgb(0xE9, 0xF2, 0xFD);
                 Danger = Color.FromArgb(0xE5, 0x48, 0x4D);
+                DangerHover = Color.FromArgb(0xF0, 0x6A, 0x6E);
+                DangerDown = Color.FromArgb(0xC9, 0x3A, 0x3F);
                 HoverBg = Color.FromArgb(0xF0, 0xF3, 0xF8);
                 Field = Color.FromArgb(0xF5, 0xF7, 0xFB);
             }

@@ -8,6 +8,8 @@ namespace KartRider.Ui
     {
         /// <summary>主按钮：主题色纯色块，白字。</summary>
         Primary,
+        /// <summary>危险操作：红色纯色块，白字（如"结束游戏"）。</summary>
+        Danger,
         /// <summary>次按钮：白底 + 细边框。</summary>
         Secondary,
         /// <summary>透明按钮：平时和背景同色，悬停才浮出浅灰底，用于导航项。</summary>
@@ -167,6 +169,10 @@ namespace KartRider.Ui
             {
                 case FlatButtonStyle.Primary:
                     fill = pressed ? Theme.AccentDown : (hovered ? Theme.AccentHover : Theme.Accent);
+                    text = Color.White;
+                    break;
+                case FlatButtonStyle.Danger:
+                    fill = pressed ? Theme.DangerDown : (hovered ? Theme.DangerHover : Theme.Danger);
                     text = Color.White;
                     break;
                 case FlatButtonStyle.DangerGhost:
