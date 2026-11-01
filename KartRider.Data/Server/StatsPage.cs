@@ -107,7 +107,16 @@ function renderUser(nick) {
 
 var currentNick = '';
 
-function timeText(ms) { return (ms != null && ms > 0) ? (ms / 1000).toFixed(2) + 's' : 'DNF'; }
+function timeText(ms) {
+  if (ms == null || ms <= 0) { return 'DNF'; }
+  // 卡丁车计时格式：分.秒.厘秒，如 5分06秒36 → 05.06.36
+  var total = Math.floor(ms);
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  var mm = Math.floor(total / 60000);
+  var ss = Math.floor((total % 60000) / 1000);
+  var cc = Math.floor((total % 1000) / 10);
+  return pad(mm) + '.' + pad(ss) + '.' + pad(cc);
+}
 
 function renderMatches(nick) {
   currentNick = nick || '';
