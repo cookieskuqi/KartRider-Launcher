@@ -85,13 +85,14 @@ namespace KartRider
                 Ui.Theme.Apply(ProfileService.SettingConfig.DarkMode);
                 ApplyLogSettings();
                 ClientItemRules.SetEnabled(!noKartRules);
-                // 启动器自更新：AutoUpdate 开启时静默更新，关闭时弹窗提示
-                // SelfUpdate=false（默认）时整段跳过：自定义构建哈希对不上官方发布，否则每次启动都会被覆盖
+                // 启动器自更新：去本项目仓库查最新 Release，哈希不一致就弹窗询问，用户可以选择不更新
+                // SelfUpdate=false 时整段跳过（Settings.json 里可手动关掉）
                 if (ProfileService.SettingConfig.SelfUpdate)
                 {
                     // 用同步等待而不是 await：Main 必须是同步方法，[STAThread] 才会真正生效。
                     // 此处尚未调用 Application.Run，没有同步上下文，阻塞不会死锁。
-                    Update.UpdateDataAsync(ProfileService.SettingConfig.AutoUpdate).GetAwaiter().GetResult();
+                    // silent 传 false：发现新版本一律弹窗询问，用户可以选择不更新。
+                    Update.UpdateDataAsync(false).GetAwaiter().GetResult();
                 }
                 else
                 {

@@ -164,6 +164,14 @@ namespace Profile
                     SaveSettings();
                 }
 
+                // v5：自更新改为指向本项目自己的 Release，并把之前强制关掉的开关重新打开
+                if (SettingConfig.SettingsVersion < 5)
+                {
+                    SettingConfig.SelfUpdate = true;
+                    SettingConfig.SettingsVersion = 5;
+                    SaveSettings();
+                }
+
                 if (SettingConfig.SettingsVersion < 2)
                 {
                     SettingConfig.SettingsVersion = 2;

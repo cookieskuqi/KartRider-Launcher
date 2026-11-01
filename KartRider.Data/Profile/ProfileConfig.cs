@@ -80,11 +80,11 @@ namespace Profile
         public bool AutoUpdate { get; set; } = false;
 
         /// <summary>
-        /// 启动器自更新开关（启动时去 GitHub 比对 Launcher.exe 的 SHA256，不一致就下载覆盖自己）。
-        /// 默认关：自定义构建的哈希永远对不上官方发布，开着会在每次启动时被官方 exe 覆盖掉本地改动。
-        /// 想恢复官方自动更新，把 Settings.json 里的 SelfUpdate 改成 true 即可。
+        /// 启动器自更新开关。启动时去本项目仓库（cookieskuqi/KartRider-Launcher）比对
+        /// 最新 Release 里 Launcher.exe 的 SHA256，不一致就弹窗询问是否更新，用户可以选择不更新。
+        /// 关掉后启动时完全不检查，把 Settings.json 里的 SelfUpdate 改成 false 即可。
         /// </summary>
-        public bool SelfUpdate { get; set; } = false;
+        public bool SelfUpdate { get; set; } = true;
 
         public bool EnableMod { get; set; } = false;
 

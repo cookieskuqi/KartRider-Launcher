@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,8 +19,9 @@ namespace KartRider
 {
     class Update
     {
-        public static string owner = "yanygm";
-        public static string repo = "Launcher_V2";
+        // 自更新检查的仓库（本项目自己的 Release）
+        public static string owner = "cookieskuqi";
+        public static string repo = "KartRider-Launcher";
         static string name;
         static string filePath;
 
@@ -70,14 +71,22 @@ namespace KartRider
                     Log.Info($"Browser_Download_Url: {launcherExeAsset.browser_download_url}");
                     Log.Info($"更新说明: \n{releaseData.body}");
                     Log.Info($"==============================");
+                    if (string.IsNullOrWhiteSpace(launcherExeAsset.digest))
+                    {
+                        Log.Info("发布信息里没有 digest，跳过自动更新");
+                        return false;
+                    }
+
                     if (launcherExeAsset.digest != sha256Hash)
                     {
                         // 非静默模式（AutoUpdate 关闭）：先弹窗询问，用户确认后才开始下载
                         if (!silent)
                         {
+                            string note = BuildNote(releaseData.body);
                             DialogResult result = MessageBox.Show(
-                                "发现新版本，是否立即更新？\n\n更新过程中启动器会短暂关闭，完成后将自动重新打开。",
-                                "发现新版本",
+                                "发现启动器新版本，是否立即更新？" + note +
+                                "\n\n更新过程中启动器会短暂关闭，完成后会自动重新打开。\n选择「否」可以继续使用当前版本。",
+                                "启动器更新",
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Question);
 
@@ -153,6 +162,42 @@ namespace KartRider
                 Log.Info($"未知错误：{ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>把 Release 说明压成几行纯文本，放进询问框。</summary>
+        private static string BuildNote(string body)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return string.Empty;
+            }
+
+            var lines = new List<string>();
+            foreach (string raw in body.Replace("\r\n", "\n").Split('\n'))
+            {
+                string line = raw.Trim().TrimStart('#', '-', '*', ' ').Trim();
+                if (line.Length == 0 || line.StartsWith(">"))
+                {
+                    continue;
+                }
+                lines.Add(line);
+                if (lines.Count >= 4)
+                {
+                    break;
+                }
+            }
+
+            if (lines.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            string text = string.Join("\n", lines);
+            if (text.Length > 220)
+            {
+                text = text.Substring(0, 220) + "…";
+            }
+            return "\n\n更新内容：\n" + text;
         }
 
         /// <summary>
