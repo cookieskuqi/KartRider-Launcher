@@ -28,140 +28,146 @@ namespace KartRider
         public static async Task<bool> UpdateDataAsync(bool silent = false)
         {
             filePath = JsonHelper.GetFilePath();
-            Log.Info($"当前程序路径: " + filePath);
+            Log.Info("当前程序路径: " + filePath);
             name = Path.GetFileName(filePath);
-            // 计算文件的SHA256哈希值
-            string sha256Hash = "sha256:" + CalculateSHA256(filePath);
-            Log.Info($"当前程序SHA256: " + sha256Hash);
             string Update_Folder = Path.Combine(Path.GetDirectoryName(filePath), "Update");
             string Update_File = Path.Combine(Update_Folder, name);
-            Log.Info($"开始读取GitHub Releases API数据...");
-            Log.Info($"==============================");
+
+            // 自更新不走 GitHub API（匿名额度 60 次/小时，很快就被限流导致检查失效），
+            // 改读 Release 附件 version.json（releases/latest/download 直链，无额度限制）
+            string localSha = CalculateSHA256(filePath).ToLowerInvariant();
+            Log.Info($"当前程序 SHA256: {localSha}");
+
             try
             {
-                // 2. 创建HttpClient（设置User-Agent，避免GitHub API拒绝请求）
-                using var httpClient = new HttpClient();
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("GitHubReleaseParser/1.0"); // GitHub要求必须设置User-Agent
-                httpClient.Timeout = TimeSpan.FromSeconds(10); // 设置10秒超时
-
-                // 3. 发送GET请求获取API响应
-                var response = await httpClient.GetAsync($"https://api.github.com/repos/{owner}/{repo}/releases/latest");
-                response.EnsureSuccessStatusCode(); // 若状态码不是200-299，抛出异常（如404、500）
-
-                // 4. 读取响应内容并反序列化为C#对象
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                var releaseData = JsonSerializer.Deserialize<GitHubReleaseRoot>(jsonContent,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); // 忽略JSON字段大小写（适配API的camelCase）
-
-                // 5. 筛选name="Launcher.exe"的资产
-                if (releaseData?.Assets == null || releaseData.Assets.Length == 0)
+                string versionJson = await FetchVersionInfoAsync();
+                if (versionJson == null)
                 {
-                    Log.Info($"错误：API返回的资产列表为空");
+                    Log.Info("版本信息获取失败，跳过自更新检查");
                     return false;
                 }
 
-                var launcherExeAsset = Array.Find(releaseData.Assets, asset =>
-                    string.Equals(asset.name, name, StringComparison.OrdinalIgnoreCase)); // 忽略文件名大小写
-
-                // 6. 输出结果
-                if (launcherExeAsset != null)
+                var info = JsonSerializer.Deserialize<VersionInfo>(versionJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (info == null || string.IsNullOrWhiteSpace(info.sha256))
                 {
-                    Log.Info($"找到目标文件：" + name);
-                    Log.Info($"Digest: {launcherExeAsset.digest}");
-                    Log.Info($"Browser_Download_Url: {launcherExeAsset.browser_download_url}");
-                    Log.Info($"更新说明: \n{releaseData.body}");
-                    Log.Info($"==============================");
-                    if (string.IsNullOrWhiteSpace(launcherExeAsset.digest))
-                    {
-                        Log.Info("发布信息里没有 digest，跳过自动更新");
-                        return false;
-                    }
-
-                    if (launcherExeAsset.digest != sha256Hash)
-                    {
-                        // 非静默模式（AutoUpdate 关闭）：先弹窗询问，用户确认后才开始下载
-                        if (!silent)
-                        {
-                            string note = BuildNote(releaseData.body);
-                            DialogResult result = MessageBox.Show(
-                                "发现启动器新版本，是否立即更新？" + note +
-                                "\n\n更新过程中启动器会短暂关闭，完成后会自动重新打开。\n选择「否」可以继续使用当前版本。",
-                                "启动器更新",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Question);
-
-                            if (result != DialogResult.Yes)
-                            {
-                                Log.Info($"用户取消更新，保留当前版本");
-                                return false;
-                            }
-                        }
-
-                        try
-                        {
-                            // 选择下载地址：CN 地区优先使用代理，否则直连
-                            string downloadUrl = launcherExeAsset.browser_download_url;
-                            var ipInfo = await GetCountryAsync();
-                            string country = ipInfo == null ? "" : ipInfo.Country;
-                            if (country != "" && country == "CN")
-                            {
-                                ProfileService.LoadSettings();
-                                string url2 = ProfileService.SettingConfig.Proxy + launcherExeAsset.browser_download_url;
-                                if (ProfileService.SettingConfig.Proxy == "https://gh-proxy.com/")
-                                {
-                                    url2 = ProfileService.SettingConfig.Proxy + launcherExeAsset.browser_download_url.Replace("https://", "");
-                                }
-                                if (await GetUrl(url2))
-                                {
-                                    downloadUrl = url2;
-                                }
-                            }
-
-                            int threadCount = 1; // 可根据需要调整线程数
-                            var downloader = new MultiThreadedDownloader(downloadUrl, Update_File, threadCount);
-                            var downloadResult = await downloader.StartDownloadAsync();
-                            if (downloadResult)
-                            {
-                                return ConfirmAndApplyUpdate(Update_File, launcherExeAsset.digest);
-                            }
-                            return downloadResult;
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Info($"下载过程中出现错误: {ex.Message}");
-                            return false;
-                        }
-                    }
-                    else
-                    {
-                        Log.Info($"当前已是最新版本，无需更新。");
-                        return false;
-                    }
-                }
-                else
-                {
-                    Log.Info($"未找到名称为\"" + name + "\"的文件");
+                    Log.Info("version.json 里没有 sha256，跳过自更新检查");
                     return false;
                 }
-                return false;
-            }
-            catch (HttpRequestException ex)
-            {
-                Log.Info($"网络请求错误：{ex.Message}");
-                Log.Info($"可能原因：API地址无效、网络断开、GitHub API限流");
-                return false;
-            }
-            catch (JsonException ex)
-            {
-                Log.Info($"JSON反序列化错误：{ex.Message}");
-                Log.Info($"可能原因：API返回格式异常");
-                return false;
+
+                string remoteSha = info.sha256.Trim().ToLowerInvariant().Replace("sha256:", "");
+                Log.Info($"远端版本 SHA256: {remoteSha}（构建于 {info.time}）");
+                if (remoteSha == localSha)
+                {
+                    Log.Info("当前已是最新版本，无需更新。");
+                    return false;
+                }
+
+                // 发现新版本：弹窗询问，用户可以选择不更新
+                string note = string.IsNullOrWhiteSpace(info.note) ? "" : "\n\n更新内容：\n" + info.note;
+                if (!silent)
+                {
+                    DialogResult result = MessageBox.Show(
+                        "发现启动器新版本（" + (info.time ?? "") + " 构建），是否立即更新？" + note +
+                        "\n\n更新过程中启动器会短暂关闭，完成后会自动重新打开。\n选择「否」可以继续使用当前版本。",
+                        "启动器更新",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
+
+                    if (result != DialogResult.Yes)
+                    {
+                        Log.Info("用户取消更新，保留当前版本");
+                        return false;
+                    }
+                }
+
+                try
+                {
+                    Directory.CreateDirectory(Update_Folder);
+                    string downloadUrl = $"https://github.com/{owner}/{repo}/releases/latest/download/{name}";
+
+                    var downloader = new MultiThreadedDownloader(downloadUrl, Update_File, 1);
+                    bool downloaded = await downloader.StartDownloadAsync();
+                    if (!downloaded)
+                    {
+                        // CN 网络直连失败时，用设置的代理前缀重试一次
+                        string proxy = ProfileService.SettingConfig.Proxy;
+                        if (!string.IsNullOrWhiteSpace(proxy))
+                        {
+                            string proxied = proxy + downloadUrl.Replace("https://", "");
+                            Log.Info($"直连下载失败，改用代理重试: {proxied}");
+                            downloaded = await new MultiThreadedDownloader(proxied, Update_File, 1).StartDownloadAsync();
+                        }
+                    }
+
+                    if (!downloaded)
+                    {
+                        Log.Info("更新包下载失败");
+                        return false;
+                    }
+
+                    return ConfirmAndApplyUpdate(Update_File, "sha256:" + remoteSha);
+                }
+                catch (Exception ex)
+                {
+                    Log.Info($"下载过程中出现错误: {ex.Message}");
+                    return false;
+                }
             }
             catch (Exception ex)
             {
-                Log.Info($"未知错误：{ex.Message}");
+                Log.Info($"自更新检查失败: {ex.Message}");
                 return false;
             }
+        }
+
+        /// <summary>读取最新 Release 的 version.json（直连优先，失败时尝试设置的代理前缀）。</summary>
+        private static async Task<string> FetchVersionInfoAsync()
+        {
+            string path = $"https://github.com/{owner}/{repo}/releases/latest/download/version.json";
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("KartRiderLauncher");
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
+                try
+                {
+                    return await httpClient.GetStringAsync(path);
+                }
+                catch (Exception ex)
+                {
+                    Log.Info($"直连获取版本信息失败: {ex.Message}");
+                }
+            }
+
+            try
+            {
+                string proxy = ProfileService.SettingConfig.Proxy;
+                if (string.IsNullOrWhiteSpace(proxy))
+                {
+                    return null;
+                }
+
+                using (var httpClient = new HttpClient())
+                {
+                    httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("KartRiderLauncher");
+                    httpClient.Timeout = TimeSpan.FromSeconds(10);
+                    return await httpClient.GetStringAsync(proxy + path.Replace("https://", ""));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Info($"代理获取版本信息也失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>Release 里 version.json 的结构。</summary>
+        public class VersionInfo
+        {
+            public string sha256 { get; set; }
+            public string time { get; set; }
+            public string note { get; set; }
         }
 
         /// <summary>把 Release 说明压成几行纯文本，放进询问框。</summary>
