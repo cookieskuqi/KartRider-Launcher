@@ -41,14 +41,15 @@ namespace KartRider.Ui
             Font = Theme.F(9.5f);
             Cursor = Cursors.Hand;
             ForeColor = Theme.TextPrimary;
-            BackColor = surface;
+            // 底色交给父容器画（卡片可能是半透明的），自己只画圆角块，避免四个角留白框
+            BackColor = Color.Transparent;
         }
 
         /// <summary>按钮所处容器的底色：控件先铺这一层，再画自己的圆角块，避免出现方角。</summary>
         public Color Surface
         {
             get { return surface; }
-            set { surface = value; BackColor = value; Invalidate(); }
+            set { surface = value; Invalidate(); }
         }
 
         public FlatButtonStyle Style
@@ -157,14 +158,6 @@ namespace KartRider.Ui
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            if (surface.A > 0)
-            {
-                using (var bg = new SolidBrush(surface))
-                {
-                    g.FillRectangle(bg, ClientRectangle);
-                }
-            }
-
             Rectangle box = new Rectangle(0, 0, Width, Height);
             Color fill;
             Color text;
@@ -206,7 +199,10 @@ namespace KartRider.Ui
                 border = style == FlatButtonStyle.Secondary;
             }
 
-            Theme.Fill(g, box, radius, fill);
+            if (fill.A > 0)
+            {
+                Theme.Fill(g, box, radius, fill);
+            }
             if (border)
             {
                 Theme.Stroke(g, box, radius, Theme.Border);
