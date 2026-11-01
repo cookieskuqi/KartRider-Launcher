@@ -38,6 +38,7 @@ namespace KartRider
   .r2 { color:#9aa4b2; font-weight:700; }
   .r3 { color:#b07a4a; font-weight:700; }
   .dnf { color:#e5484d; }
+  .me { color:#4c9eea; font-weight:700; }
   .empty { color:#8a919c; font-size:13px; padding:10px 0; }
   @media (prefers-color-scheme: dark) {
     body { background:#1e2126; color:#e6e9ef; }
@@ -104,21 +105,39 @@ function renderUser(nick) {
   }).catch(function () { box.innerHTML = '<div class=""empty"">查询失败</div>'; });
 }
 
+var currentNick = '';
+
+function timeText(ms) { return (ms != null && ms > 0) ? (ms / 1000).toFixed(2) + 's' : 'DNF'; }
+
 function renderMatches(nick) {
+  currentNick = nick || '';
   var box = document.getElementById('matches');
   api('/api/matches?n=50' + (nick ? '&nickname=' + encodeURIComponent(nick) : '')).then(function (list) {
     if (!list.length) { box.innerHTML = '<div class=""empty"">暂无对局记录（打完一局后这里就会出现）</div>'; return; }
     var rows = list.map(function (m) {
-      var ps = (m.players || []).filter(function (p) { return !p.ai; })
+      var ps = (m.players || []).slice()
         .sort(function (a, b) { return (a.rank || 99) - (b.rank || 99); })
         .map(function (p) {
-          return '<span class=""' + rankClass(p.rank, p.dnf) + '"">' + esc(p.nickname) +
-                 (p.dnf ? '(DNF)' : '(' + rankText(p.rank) + ')') + '</span>';
+          var cls = p.ai ? 'empty' : rankClass(p.rank, p.dnf);
+          var me = (!p.ai && currentNick && p.nickname.toLowerCase() === currentNick.toLowerCase());
+          if (me) { cls = 'me'; }
+          var rk = p.dnf ? 'DNF' : ('第' + p.rank + '名，' + timeText(p.timeMs));
+          var tag = p.ai ? ' <span class=""empty"">AI</span>' : '';
+          return '<span class=""' + cls + '"">' + esc(p.nickname) + tag + '（' + rk + '）</span>';
         }).join(' ');
-      var t = (m.timeMs > 0) ? (m.timeMs / 1000).toFixed(2) + 's' : 'DNF';
-      return '<tr><td>' + esc(m.time) + '</td><td>' + esc(m.track) + '</td><td>' + t + '</td><td>' + ps + '</td></tr>';
+
+      var mine = (m.players || []).find(function (p) {
+        return !p.ai && currentNick && p.nickname.toLowerCase() === currentNick.toLowerCase();
+      });
+      var myRank = mine ? rankText(mine.rank, mine.dnf) : '-';
+      var myTime = mine ? timeText(mine.timeMs) : '-';
+
+      return '<tr><td>' + esc(m.time) + '</td><td>' + esc(m.track) + '</td><td>' + myRank +
+             '</td><td>' + myTime + '</td><td>' + ps + '</td></tr>';
     }).join('');
-    box.innerHTML = '<table><tr><th>时间</th><th>赛道</th><th>用时</th><th>玩家（名次）</th></tr>' + rows + '</table>';
+    box.innerHTML =
+      '<table><tr><th>时间</th><th>赛道</th><th>名次</th><th>用时</th><th>本局全部玩家（名次，用时）</th></tr>' + rows + '</table>' +
+      '<div class=""empty"">DNF = 服务器没有收到这一局的过线时间（常见于提前退出房间，或结算倒计时先到期）。AI 的成绩由客户端模拟上报。</div>';
   }).catch(function () { box.innerHTML = '<div class=""empty"">读取失败</div>' });
 }
 
